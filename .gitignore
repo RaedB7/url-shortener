@@ -1,0 +1,11 @@
+target/
+node_modules/
+build/
+.svelte-kit/
+dist/
+.DS_Store
+hs_err_pid*.log
+compose-up.log
+*.tmp
+.env
+logs/

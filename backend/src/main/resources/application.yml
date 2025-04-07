@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: url-shortener
+  r2dbc:
+    url: r2dbc:postgresql://${US_DB_HOST:localhost}:${US_DB_PORT:5432}/${US_DB_NAME:urlshortener}
+    username: ${US_DB_USER:urlshortener}
+    password: ${US_DB_PASSWORD:urlshortener_secret}
+    pool:
+      max-size: 20
+      initial-size: 5
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  data:
+    redis:
+      host: ${US_REDIS_HOST:localhost}
+      port: ${US_REDIS_PORT:6379}
+      password: ${US_REDIS_PASSWORD:}
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: url-shortener
+  tracing:
+    sampling:
+      probability: 0.1
+    export:
+      otlp:
+        endpoint: ${US_OTLP_ENDPOINT:http://localhost:4318}
+  info:
+    env:
+      enabled: true
+
+urlshortener:
+  worker-id: ${US_WORKER_ID:0}
+  session-secret: ${US_SESSION_SECRET:dev-session-secret-change-me}
+  session-ttl-days: 7
+  bloom-filter:
+    expected-insertions: 100000
+    false-positive-rate: 0.001
+  rate-limit:
+    create-anon-per-minute: 5
+    create-auth-per-minute: 30
+    login-per-minute: 5
+    stats-per-minute: 30
+    redirect-burst: 200
+    redirect-refill-per-minute: 200
+    guest-daily-cap: 50
+
+logging:
+  level:
+    com.urlshortener: DEBUG
+    io.r2dbc.postgresql.QUERY: INFO
+    io.lettuce.core: INFO
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: docker
+  r2dbc:
+    url: r2dbc:postgresql://${US_DB_HOST:postgres}:${US_DB_PORT:5432}/${US_DB_NAME:urlshortener}
+  data:
+    redis:
+      host: ${US_REDIS_HOST:redis}
+  tracing:
+    export:
+      otlp:
+        endpoint: ${US_OTLP_ENDPOINT:http://jaeger:4318}

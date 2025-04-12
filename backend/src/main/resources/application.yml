@@ -10,8 +10,7 @@ spring:
       initial-size: 5
   sql:
     init:
-      mode: always
-      schema-locations: classpath:schema.sql
+      mode: never
   data:
     redis:
       host: ${US_REDIS_HOST:localhost}

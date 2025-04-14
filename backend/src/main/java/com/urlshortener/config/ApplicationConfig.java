@@ -5,12 +5,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 
+import com.urlshortener.application.AuthService;
 import com.urlshortener.application.CreateShortUrlService;
 import com.urlshortener.application.ManageUrlsService;
 import com.urlshortener.application.ResolveUrlService;
+import com.urlshortener.domain.port.inbound.AuthUseCase;
 import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase;
 import com.urlshortener.domain.port.inbound.ManageUrlsUseCase;
 import com.urlshortener.domain.port.inbound.ResolveUrlUseCase;
+import com.urlshortener.domain.port.outbound.AuditLog;
 import com.urlshortener.domain.port.outbound.CacheRepository;
 import com.urlshortener.domain.port.outbound.ClickEventPublisher;
 import com.urlshortener.domain.port.outbound.IdGenerator;
@@ -18,6 +21,7 @@ import com.urlshortener.domain.port.outbound.PasswordHasher;
 import com.urlshortener.domain.port.outbound.SessionStore;
 import com.urlshortener.domain.port.outbound.UniqueVisitorCounter;
 import com.urlshortener.domain.port.outbound.UrlRepository;
+import com.urlshortener.domain.port.outbound.UserRepository;
 import com.urlshortener.domain.service.UrlShortener;
 import com.urlshortener.infrastructure.cache.RedisUniqueVisitorCounter;
 import com.urlshortener.infrastructure.dns.PublicHostVerifier;
@@ -81,5 +85,14 @@ public class ApplicationConfig {
     @Bean
     public UniqueVisitorCounter uniqueVisitorCounter(ReactiveRedisTemplate<String, String> redis) {
         return new RedisUniqueVisitorCounter(redis);
+    }
+
+    @Bean
+    public AuthUseCase authUseCase(UserRepository userRepository,
+            PasswordHasher passwordHasher,
+            SessionStore sessionStore,
+            IdGenerator idGenerator,
+            AuditLog auditLog) {
+        return new AuthService(userRepository, passwordHasher, sessionStore, idGenerator, auditLog);
     }
 }

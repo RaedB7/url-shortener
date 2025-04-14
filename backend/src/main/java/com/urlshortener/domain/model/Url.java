@@ -34,8 +34,8 @@ public class Url {
         return deletedAt != null;
     }
 
-    public boolean isOwnedBy(long userId) {
-        return ownerId != null && ownerId == userId;
+    public boolean isOwnedBy(Long userId) {
+        return userId != null && ownerId != null && ownerId.equals(userId);
     }
 
     public boolean isGuestLink() {

@@ -20,14 +20,14 @@ class R2dbcAuditLogRepository implements AuditLog {
     @Override
     public Mono<Void> append(Long actorId, String actorEmail, String action, String target, String detail) {
         return databaseClient.sql("""
-                        INSERT INTO audit_log (actor_id, actor_email, action, target, detail)
-                        VALUES (:actorId, :actorEmail, :action, :target, :detail)
-                        """)
-                .bind("actorId", actorId)
-                .bind("actorEmail", actorEmail)
+                INSERT INTO audit_log (actor_id, actor_email, action, target, detail)
+                VALUES (:actorId, :actorEmail, :action, :target, :detail)
+                """)
+                .bind("actorId", actorId == null ? 0L : actorId)
+                .bind("actorEmail", actorEmail == null ? "" : actorEmail)
                 .bind("action", action)
-                .bind("target", target)
-                .bind("detail", detail)
+                .bind("target", target == null ? "" : target)
+                .bind("detail", detail == null ? "" : detail)
                 .fetch()
                 .rowsUpdated()
                 .then();
@@ -36,11 +36,11 @@ class R2dbcAuditLogRepository implements AuditLog {
     @Override
     public Flux<Entry> latest(int limit, int offset) {
         return databaseClient.sql("""
-                        SELECT actor_id, actor_email, action, target, detail, created_at
-                        FROM audit_log
-                        ORDER BY created_at DESC
-                        LIMIT :limit OFFSET :offset
-                        """)
+                SELECT actor_id, actor_email, action, target, detail, created_at
+                FROM audit_log
+                ORDER BY created_at DESC
+                LIMIT :limit OFFSET :offset
+                """)
                 .bind("limit", limit)
                 .bind("offset", offset)
                 .fetch()

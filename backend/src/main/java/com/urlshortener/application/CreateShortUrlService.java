@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 
 import com.urlshortener.domain.exception.AliasAlreadyExistsException;
+import com.urlshortener.domain.model.Actor;
 import com.urlshortener.domain.model.OriginalUrl;
 import com.urlshortener.domain.model.ShortCode;
 import com.urlshortener.domain.model.Url;

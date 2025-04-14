@@ -64,6 +64,9 @@ class PersistenceIT {
         DatabaseClient client = DatabaseClient.create(factory);
         repository = new R2dbcUrlRepository(new R2dbcEntityTemplate(factory), client, new NoopBloom());
 
+        client.sql("TRUNCATE urls, click_events, audit_log, custom_domains").then().block();
+        client.sql("TRUNCATE users CASCADE").then().block();
+
         for (long uid : new long[] { 1L, 2L, 7L, 42L }) {
             client.sql(
                     "INSERT INTO users (id, email, password_hash, role) VALUES (:id, :email, 'x', 'USER') ON CONFLICT DO NOTHING")

@@ -1,13 +1,12 @@
 package com.urlshortener.application;
 
 import com.urlshortener.domain.exception.ForbiddenException;
-import com.urlshortener.domain.exception.UnauthorizedException;
 import com.urlshortener.domain.exception.UrlNotFoundException;
+import com.urlshortener.domain.model.Actor;
 import com.urlshortener.domain.model.Url;
 import com.urlshortener.domain.port.inbound.ManageUrlsUseCase;
 import com.urlshortener.domain.port.outbound.CacheRepository;
 import com.urlshortener.domain.port.outbound.UrlRepository;
-
 import reactor.core.publisher.Mono;
 
 public class ManageUrlsService implements ManageUrlsUseCase {
@@ -34,16 +33,18 @@ public class ManageUrlsService implements ManageUrlsUseCase {
 
     @Override
     public Mono<PageResult<Url>> listMyLinks(Actor actor, int page, int size, String search) {
-        if (!actor.admin()) {
-            return urlRepository.findAllByOwner(actor.userId(), page, size, search)
-                    .map(this::toPageResult);
+        if (!actor.authenticated()) {
+            return Mono.error(new ForbiddenException("Login required to list your links"));
         }
-        return urlRepository.findAll(page, size, search).map(this::toPageResult);
+        return urlRepository.findAllByOwner(actor.userId(), page, size, search)
+                .map(this::toPageResult);
     }
 
     @Override
     public Mono<PageResult<Url>> listAllLinks(Actor actor, int page, int size, String search) {
-        requireAdmin(actor);
+        if (!actor.admin()) {
+            return Mono.error(new ForbiddenException("Admin access required"));
+        }
         return urlRepository.findAll(page, size, search).map(this::toPageResult);
     }
 
@@ -58,12 +59,6 @@ public class ManageUrlsService implements ManageUrlsUseCase {
                     return urlRepository.softDeleteByCode(code)
                             .then(cacheRepository.evict(code));
                 });
-    }
-
-    private void requireAdmin(Actor actor) {
-        if (!actor.admin()) {
-            throw new UnauthorizedException("Admin access required");
-        }
     }
 
     private PageResult<Url> toPageResult(UrlRepository.Page<Url> page) {

@@ -1,10 +1,10 @@
 package com.urlshortener.domain.port.inbound;
 
-import java.time.Instant;
-
+import com.urlshortener.domain.model.Actor;
 import com.urlshortener.domain.model.Url;
-
 import reactor.core.publisher.Mono;
+
+import java.time.Instant;
 
 public interface CreateShortUrlUseCase {
 
@@ -12,8 +12,5 @@ public interface CreateShortUrlUseCase {
 
     record CreateUrlCommand(String originalUrl, String customAlias, String password,
             Instant expiresAt) {
-    }
-
-    record Actor(Long userId, boolean authenticated) {
     }
 }

@@ -1,9 +1,8 @@
 package com.urlshortener.infrastructure.web;
 
+import com.urlshortener.domain.model.Actor;
 import com.urlshortener.domain.model.User;
-import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase.Actor;
 import com.urlshortener.domain.port.outbound.SessionStore;
-import com.urlshortener.infrastructure.util.ClientIp;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -28,8 +27,9 @@ public class CurrentUser {
     }
 
     public Mono<Actor> actor(ServerHttpRequest request) {
-        return user(request).map(u -> new Actor(u.getId(), true))
-                .defaultIfEmpty(new Actor(null, false));
+        return user(request)
+                .map(u -> u.isAdmin() ? Actor.admin(u.getId()) : Actor.user(u.getId()))
+                .defaultIfEmpty(Actor.guest());
     }
 
     public Mono<User> user(ServerHttpRequest request) {

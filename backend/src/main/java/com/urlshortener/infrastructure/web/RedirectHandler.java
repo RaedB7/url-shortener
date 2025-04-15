@@ -32,7 +32,7 @@ public class RedirectHandler implements WebFilter {
         String path = exchange.getRequest().getURI().getPath();
 
         if (path.length() <= 1 || path.startsWith("/api/") || path.startsWith("/actuator/")
-                || path.equals("/") || path.contains("/")) {
+                || path.indexOf('/', 1) != -1) {
             return chain.filter(exchange);
         }
 

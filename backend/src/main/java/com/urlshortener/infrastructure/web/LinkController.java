@@ -1,0 +1,108 @@
+package com.urlshortener.infrastructure.web;
+
+import com.urlshortener.domain.model.Actor;
+import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase;
+import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase.CreateUrlCommand;
+import com.urlshortener.domain.port.inbound.ManageUrlsUseCase;
+import com.urlshortener.infrastructure.qr.QrCodeGenerator;
+import com.urlshortener.infrastructure.util.ClientIp;
+import com.urlshortener.infrastructure.web.dto.CreateUrlRequest;
+import com.urlshortener.infrastructure.web.dto.UrlResponse;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+
+import java.time.Instant;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/links")
+public class LinkController {
+
+    private final CreateShortUrlUseCase createShortUrlUseCase;
+    private final com.urlshortener.domain.port.inbound.ManageUrlsUseCase manageUrlsUseCase;
+    private final CurrentUser currentUser;
+    private final QrCodeGenerator qrCodeGenerator;
+
+    public LinkController(CreateShortUrlUseCase createShortUrlUseCase,
+            com.urlshortener.domain.port.inbound.ManageUrlsUseCase manageUrlsUseCase,
+            CurrentUser currentUser,
+            QrCodeGenerator qrCodeGenerator) {
+        this.createShortUrlUseCase = createShortUrlUseCase;
+        this.manageUrlsUseCase = manageUrlsUseCase;
+        this.currentUser = currentUser;
+        this.qrCodeGenerator = qrCodeGenerator;
+    }
+
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<UrlResponse> createShortUrl(@Valid @RequestBody CreateUrlRequest request,
+            ServerHttpRequest httpRequest) {
+        Instant expiresAt = null;
+        if (request.expiresAt() != null && !request.expiresAt().isBlank()) {
+            expiresAt = Instant.parse(request.expiresAt());
+        }
+
+        CreateUrlCommand command = new CreateUrlCommand(
+                request.url(), request.alias(), request.password(), expiresAt);
+
+        return currentUser.actor(httpRequest)
+                .flatMap(actor -> createShortUrlUseCase.create(command, actor))
+                .map(url -> UrlResponse.from(url, baseUrl(httpRequest)));
+    }
+
+    @GetMapping
+    public Mono<com.urlshortener.domain.port.inbound.ManageUrlsUseCase.PageResult<UrlResponse>> listMyLinks(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search,
+            ServerHttpRequest request) {
+        return currentUser.actor(request)
+                .flatMap(actor -> manageUrlsUseCase.listMyLinks(actor, page, size, search))
+                .map(pageResult -> toResponsePage(pageResult, baseUrl(request)));
+    }
+
+    @GetMapping("/{code}")
+    public Mono<UrlResponse> getLink(@PathVariable String code, ServerHttpRequest request) {
+        return currentUser.actor(request)
+                .flatMap(actor -> manageUrlsUseCase.getByCode(code, actor))
+                .map(url -> UrlResponse.from(url, baseUrl(request)));
+    }
+
+    @DeleteMapping("/{code}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> deleteLink(@PathVariable String code, ServerHttpRequest request) {
+        return currentUser.actor(request)
+                .flatMap(actor -> manageUrlsUseCase.delete(code, actor));
+    }
+
+    @GetMapping(value = "/{code}/qr", produces = MediaType.IMAGE_PNG_VALUE)
+    public Mono<byte[]> qrCode(@PathVariable String code, ServerHttpRequest request) {
+        String shortUrl = baseUrl(request) + "/" + code;
+        return qrCodeGenerator.generate(shortUrl);
+    }
+
+    private ManageUrlsUseCase.PageResult<UrlResponse> toResponsePage(
+            ManageUrlsUseCase.PageResult<com.urlshortener.domain.model.Url> page,
+            String baseUrl) {
+        return new ManageUrlsUseCase.PageResult<>(
+                page.content().stream().map(url -> UrlResponse.from(url, baseUrl)).toList(),
+                page.page(), page.size(), page.totalElements(), page.totalPages());
+    }
+
+    private String baseUrl(ServerHttpRequest request) {
+        var uri = request.getURI();
+        return uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "");
+    }
+}

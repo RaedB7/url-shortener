@@ -5,6 +5,7 @@ import com.urlshortener.domain.exception.UrlNotFoundException;
 import com.urlshortener.domain.model.Url;
 import com.urlshortener.domain.port.inbound.ResolveUrlUseCase;
 import com.urlshortener.domain.port.inbound.ResolveUrlUseCase.ClickMetadata;
+import com.urlshortener.infrastructure.dns.PublicHostVerifier;
 import com.urlshortener.infrastructure.util.ClientIp;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,9 +23,11 @@ import java.net.URI;
 public class RedirectHandler implements WebFilter {
 
     private final ResolveUrlUseCase resolveUrlUseCase;
+    private final PublicHostVerifier hostVerifier;
 
-    public RedirectHandler(ResolveUrlUseCase resolveUrlUseCase) {
+    public RedirectHandler(ResolveUrlUseCase resolveUrlUseCase, PublicHostVerifier hostVerifier) {
         this.resolveUrlUseCase = resolveUrlUseCase;
+        this.hostVerifier = hostVerifier;
     }
 
     @Override
@@ -48,7 +51,7 @@ public class RedirectHandler implements WebFilter {
                 request.getHeaders().getFirst("User-Agent"));
 
         return resolveUrlUseCase.resolve(code, metadata)
-                .flatMap(url -> redirect(exchange, url))
+                .flatMap(url -> recheckTargetHost(exchange, url, code))
                 .onErrorResume(UrlNotFoundException.class,
                         ex -> errorPage(exchange, HttpStatus.NOT_FOUND, "404",
                                 "This link doesn't exist."))
@@ -58,10 +61,23 @@ public class RedirectHandler implements WebFilter {
                 .then();
     }
 
+    private Mono<Void> recheckTargetHost(ServerWebExchange exchange, Url url, String code) {
+        String host = URI.create(url.getOriginalUrl().getValue()).getHost();
+        if (host == null) {
+            return redirect(exchange, url);
+        }
+        return hostVerifier.isPublicCached(host)
+                .flatMap(isPublic -> {
+                    if (!isPublic) {
+                        hostVerifier.block(host, code);
+                        return errorPage(exchange, HttpStatus.FORBIDDEN, "403",
+                                "This link has been blocked.");
+                    }
+                    return redirect(exchange, url);
+                });
+    }
+
     private Mono<Void> redirect(ServerWebExchange exchange, Url url) {
-        // 302 not 301: a permanent redirect gets cached by browsers and keeps
-        // serving stale targets for months after an edit; temporary keeps us
-        // in the loop for analytics and expiry too
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.FOUND);
         response.getHeaders().setLocation(URI.create(url.getOriginalUrl().getValue()));

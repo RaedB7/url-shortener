@@ -1,8 +1,10 @@
 package com.urlshortener.infrastructure.web;
 
 import com.urlshortener.domain.model.Actor;
+import com.urlshortener.domain.model.Url;
 import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase;
 import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase.CreateUrlCommand;
+import com.urlshortener.domain.port.inbound.GetAnalyticsUseCase;
 import com.urlshortener.domain.port.inbound.ManageUrlsUseCase;
 import com.urlshortener.infrastructure.qr.QrCodeGenerator;
 import com.urlshortener.infrastructure.util.ClientIp;
@@ -31,16 +33,19 @@ import java.util.Map;
 public class LinkController {
 
     private final CreateShortUrlUseCase createShortUrlUseCase;
-    private final com.urlshortener.domain.port.inbound.ManageUrlsUseCase manageUrlsUseCase;
+    private final ManageUrlsUseCase manageUrlsUseCase;
+    private final GetAnalyticsUseCase analyticsUseCase;
     private final CurrentUser currentUser;
     private final QrCodeGenerator qrCodeGenerator;
 
     public LinkController(CreateShortUrlUseCase createShortUrlUseCase,
-            com.urlshortener.domain.port.inbound.ManageUrlsUseCase manageUrlsUseCase,
+            ManageUrlsUseCase manageUrlsUseCase,
+            GetAnalyticsUseCase analyticsUseCase,
             CurrentUser currentUser,
             QrCodeGenerator qrCodeGenerator) {
         this.createShortUrlUseCase = createShortUrlUseCase;
         this.manageUrlsUseCase = manageUrlsUseCase;
+        this.analyticsUseCase = analyticsUseCase;
         this.currentUser = currentUser;
         this.qrCodeGenerator = qrCodeGenerator;
     }
@@ -85,6 +90,17 @@ public class LinkController {
     public Mono<Void> deleteLink(@PathVariable String code, ServerHttpRequest request) {
         return currentUser.actor(request)
                 .flatMap(actor -> manageUrlsUseCase.delete(code, actor));
+    }
+
+    @GetMapping("/{code}/stats")
+    public Mono<GetAnalyticsUseCase.LinkStats> getLinkStats(
+            @PathVariable String code,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
+            ServerHttpRequest request) {
+        return currentUser.actor(request)
+                .flatMap(actor -> manageUrlsUseCase.getByCode(code, actor))
+                .then(analyticsUseCase.statsFor(code, from, to));
     }
 
     @GetMapping(value = "/{code}/qr", produces = MediaType.IMAGE_PNG_VALUE)

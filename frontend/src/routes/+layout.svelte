@@ -1,43 +1,53 @@
 <script lang="ts">
-	import '../app.css';
-	import '@fontsource/inter/400.css';
-	import '@fontsource/inter/600.css';
-	import '@fontsource/inter/700.css';
-	import { api } from '$lib/api';
-	import type { Me } from '$lib/api';
+	import "../app.css";
+	import "@fontsource/inter/400.css";
+	import "@fontsource/inter/600.css";
+	import "@fontsource/inter/700.css";
+	import { api } from "$lib/api";
+	import type { Me } from "$lib/api";
+	import { page as pageStore } from "$app/state";
 
 	let { children } = $props();
 	let me = $state<Me | null>(null);
 
 	async function logout() {
-		await api('/auth/logout', { method: 'POST' }).catch(() => {});
+		await api("/auth/logout", { method: "POST" }).catch(() => {});
 		me = null;
 	}
 
 	async function refreshMe() {
 		try {
-			me = await api<Me>('/auth/me');
+			me = await api<Me>("/auth/me");
 		} catch {
 			me = null;
 		}
 	}
 
 	$effect(() => {
+		void pageStore.url.pathname;
 		refreshMe();
 	});
 </script>
 
+<svelte:head>
+	<title>URLShortener</title>
+</svelte:head>
+
 <nav class="topnav">
 	<div class="container nav-inner">
-		<a href="/" class="logo"><span class="gradient-text">URL</span>Shortener</a>
+		<a href="/" class="logo"
+			><span class="gradient-text">URL</span>Shortener</a
+		>
 		<div class="nav-links">
 			{#if me}
 				<a href="/links">My Links</a>
-				{#if me.role === 'ADMIN'}
+				{#if me.role === "ADMIN"}
 					<a href="/admin">Admin</a>
 				{/if}
 				<span class="chip">{me.email}</span>
-				<button class="btn btn-ghost btn-sm" onclick={logout}>Logout</button>
+				<button class="btn btn-ghost btn-sm" onclick={logout}
+					>Logout</button
+				>
 			{:else}
 				<a href="/login">Login</a>
 				<a href="/register" class="btn btn-primary btn-sm">Register</a>

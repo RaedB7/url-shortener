@@ -5,17 +5,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 
+import com.urlshortener.application.AnalyticsQueryService;
 import com.urlshortener.application.AuthService;
 import com.urlshortener.application.CreateShortUrlService;
 import com.urlshortener.application.ManageUrlsService;
 import com.urlshortener.application.ResolveUrlService;
 import com.urlshortener.domain.port.inbound.AuthUseCase;
 import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase;
+import com.urlshortener.domain.port.inbound.GetAnalyticsUseCase;
 import com.urlshortener.domain.port.inbound.ManageUrlsUseCase;
 import com.urlshortener.domain.port.inbound.ResolveUrlUseCase;
 import com.urlshortener.domain.port.outbound.AuditLog;
 import com.urlshortener.domain.port.outbound.CacheRepository;
 import com.urlshortener.domain.port.outbound.ClickEventPublisher;
+import com.urlshortener.domain.port.outbound.ClickEventRepository;
 import com.urlshortener.domain.port.outbound.IdGenerator;
 import com.urlshortener.domain.port.outbound.PasswordHasher;
 import com.urlshortener.domain.port.outbound.SessionStore;
@@ -94,5 +97,12 @@ public class ApplicationConfig {
             IdGenerator idGenerator,
             AuditLog auditLog) {
         return new AuthService(userRepository, passwordHasher, sessionStore, idGenerator, auditLog);
+    }
+
+    @Bean
+    public GetAnalyticsUseCase getAnalyticsUseCase(ClickEventRepository clickEventRepository,
+            UniqueVisitorCounter uniqueVisitorCounter,
+            UserRepository userRepository) {
+        return new AnalyticsQueryService(clickEventRepository, uniqueVisitorCounter, userRepository);
     }
 }

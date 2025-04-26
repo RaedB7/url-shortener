@@ -1,13 +1,5 @@
 package com.urlshortener.application;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.urlshortener.domain.exception.UrlExpiredException;
 import com.urlshortener.domain.exception.UrlNotFoundException;
 import com.urlshortener.domain.model.ClickEvent;
@@ -15,8 +7,14 @@ import com.urlshortener.domain.model.Url;
 import com.urlshortener.domain.port.inbound.ResolveUrlUseCase;
 import com.urlshortener.domain.port.outbound.CacheRepository;
 import com.urlshortener.domain.port.outbound.ClickEventPublisher;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 
 public class ResolveUrlService implements ResolveUrlUseCase {
 
@@ -31,7 +29,7 @@ public class ResolveUrlService implements ResolveUrlUseCase {
     }
 
     @Override
-    public Mono<Url> resolve(String code, ClickMetadata metadata) {
+    public Mono<Url> resolve(String code, ClickMetadata metadata, boolean trackClick) {
         return cacheRepository.get(code)
                 .switchIfEmpty(Mono.error(new UrlNotFoundException(code)))
                 .flatMap(url -> {
@@ -41,6 +39,9 @@ public class ResolveUrlService implements ResolveUrlUseCase {
                     if (url.isExpired()) {
                         return cacheRepository.evict(code)
                                 .then(Mono.error(new UrlExpiredException(code)));
+                    }
+                    if (!trackClick) {
+                        return Mono.just(url);
                     }
                     return publishClickEvent(url, metadata)
                             .thenReturn(url);

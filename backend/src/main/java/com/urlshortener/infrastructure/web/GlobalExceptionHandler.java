@@ -2,6 +2,7 @@ package com.urlshortener.infrastructure.web;
 
 import com.urlshortener.domain.exception.AccountSuspendedException;
 import com.urlshortener.domain.exception.AliasAlreadyExistsException;
+import com.urlshortener.domain.exception.DomainAlreadyExistsException;
 import com.urlshortener.domain.exception.EmailTakenException;
 import com.urlshortener.domain.exception.ForbiddenException;
 import com.urlshortener.domain.exception.InvalidUrlException;
@@ -81,6 +82,12 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleEmailTaken(EmailTakenException ex) {
         return problem(HttpStatus.CONFLICT, "Email Already Registered", ex.getMessage(),
                 "https://urlshortener.dev/errors/email-taken");
+    }
+
+    @ExceptionHandler(DomainAlreadyExistsException.class)
+    public ProblemDetail handleDomainExists(DomainAlreadyExistsException ex) {
+        return problem(HttpStatus.CONFLICT, "Domain Already Registered", ex.getMessage(),
+                "https://urlshortener.dev/errors/domain-taken");
     }
 
     @ExceptionHandler(WebExchangeBindException.class)

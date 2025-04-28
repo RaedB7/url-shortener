@@ -16,13 +16,14 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.urlshortener.application.CreateShortUrlService;
 import com.urlshortener.domain.exception.InvalidUrlException;
 import com.urlshortener.domain.model.OriginalUrl;
+import com.urlshortener.domain.port.outbound.DnsVerifier;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-public class PublicHostVerifier implements CreateShortUrlService.HostPolicy {
+public class PublicHostVerifier implements CreateShortUrlService.HostPolicy, DnsVerifier {
 
     private static final Logger log = LoggerFactory.getLogger(PublicHostVerifier.class);
     private static final Logger abuseLog = LoggerFactory.getLogger("abuse");

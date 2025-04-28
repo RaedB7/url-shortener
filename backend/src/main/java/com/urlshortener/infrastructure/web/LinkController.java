@@ -37,17 +37,20 @@ public class LinkController {
     private final GetAnalyticsUseCase analyticsUseCase;
     private final CurrentUser currentUser;
     private final QrCodeGenerator qrCodeGenerator;
+    private final com.urlshortener.domain.port.outbound.CustomDomainRepository customDomainRepository;
 
     public LinkController(CreateShortUrlUseCase createShortUrlUseCase,
             ManageUrlsUseCase manageUrlsUseCase,
             GetAnalyticsUseCase analyticsUseCase,
             CurrentUser currentUser,
-            QrCodeGenerator qrCodeGenerator) {
+            QrCodeGenerator qrCodeGenerator,
+            com.urlshortener.domain.port.outbound.CustomDomainRepository customDomainRepository) {
         this.createShortUrlUseCase = createShortUrlUseCase;
         this.manageUrlsUseCase = manageUrlsUseCase;
         this.analyticsUseCase = analyticsUseCase;
         this.currentUser = currentUser;
         this.qrCodeGenerator = qrCodeGenerator;
+        this.customDomainRepository = customDomainRepository;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -63,8 +66,9 @@ public class LinkController {
                 request.url(), request.alias(), request.password(), expiresAt);
 
         return currentUser.actor(httpRequest)
-                .flatMap(actor -> createShortUrlUseCase.create(command, actor))
-                .map(url -> UrlResponse.from(url, baseUrl(httpRequest)));
+                .flatMap(actor -> createShortUrlUseCase.create(command, actor)
+                        .flatMap(url -> baseUrl(httpRequest, actor)
+                                .map(base -> UrlResponse.from(url, base))));
     }
 
     @GetMapping
@@ -105,8 +109,9 @@ public class LinkController {
 
     @GetMapping(value = "/{code}/qr", produces = MediaType.IMAGE_PNG_VALUE)
     public Mono<byte[]> qrCode(@PathVariable String code, ServerHttpRequest request) {
-        String shortUrl = baseUrl(request) + "/" + code;
-        return qrCodeGenerator.generate(shortUrl);
+        return currentUser.actor(request)
+                .flatMap(actor -> baseUrl(request, actor)
+                        .flatMap(base -> qrCodeGenerator.generate(base + "/" + code)));
     }
 
     private ManageUrlsUseCase.PageResult<UrlResponse> toResponsePage(
@@ -120,5 +125,17 @@ public class LinkController {
     private String baseUrl(ServerHttpRequest request) {
         var uri = request.getURI();
         return uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "");
+    }
+
+    private Mono<String> baseUrl(ServerHttpRequest request, com.urlshortener.domain.model.Actor actor) {
+        String host = request.getHeaders().getFirst("Host");
+        if (host == null || host.isBlank() || !actor.authenticated()) {
+            return Mono.just(baseUrl(request));
+        }
+        String cleanHost = host.split(":")[0].toLowerCase();
+        return customDomainRepository.findByDomain(cleanHost)
+                .filter(d -> d.isVerified() && d.isOwnedBy(actor.userId()))
+                .map(d -> "https://" + d.getDomain())
+                .defaultIfEmpty(baseUrl(request));
     }
 }

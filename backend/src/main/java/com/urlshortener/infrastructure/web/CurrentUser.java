@@ -38,8 +38,7 @@ public class CurrentUser {
             return Mono.empty();
         }
         return sessionStore.userId(token)
-                .flatMap(userLookup::byId)
-                .filter(u -> !u.isSuspended());
+                .flatMap(userLookup::byId);
     }
 
     public String token(ServerHttpRequest request) {

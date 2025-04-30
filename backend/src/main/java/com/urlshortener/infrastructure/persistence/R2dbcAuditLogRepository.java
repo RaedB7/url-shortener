@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 
 @Repository
 class R2dbcAuditLogRepository implements AuditLog {
@@ -51,7 +51,7 @@ class R2dbcAuditLogRepository implements AuditLog {
                         (String) row.get("action"),
                         (String) row.get("target"),
                         (String) row.get("detail"),
-                        (Instant) row.get("created_at")));
+                        ((OffsetDateTime) row.get("created_at")).toInstant()));
     }
 
     @Override

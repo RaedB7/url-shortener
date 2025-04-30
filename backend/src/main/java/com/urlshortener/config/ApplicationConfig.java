@@ -5,12 +5,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 
+import com.urlshortener.application.AdminService;
 import com.urlshortener.application.AnalyticsQueryService;
 import com.urlshortener.application.AuthService;
 import com.urlshortener.application.CreateShortUrlService;
 import com.urlshortener.application.DomainService;
 import com.urlshortener.application.ManageUrlsService;
 import com.urlshortener.application.ResolveUrlService;
+import com.urlshortener.domain.port.inbound.AdminUseCase;
 import com.urlshortener.domain.port.inbound.AuthUseCase;
 import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase;
 import com.urlshortener.domain.port.inbound.GetAnalyticsUseCase;
@@ -116,5 +118,14 @@ public class ApplicationConfig {
             DnsVerifier dnsVerifier,
             AuditLog auditLog) {
         return new DomainService(customDomainRepository, idGenerator, dnsVerifier, auditLog);
+    }
+
+    @Bean
+    public AdminUseCase adminUseCase(UserRepository userRepository,
+            GetAnalyticsUseCase analytics,
+            ManageUrlsUseCase manageUrls,
+            AuditLog auditLog,
+            MeterRegistry meterRegistry) {
+        return new AdminService(userRepository, analytics, manageUrls, auditLog, meterRegistry);
     }
 }

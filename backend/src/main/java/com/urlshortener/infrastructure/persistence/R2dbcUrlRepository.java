@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -60,8 +61,25 @@ class R2dbcUrlRepository implements UrlRepository {
     public Mono<Void> softDeleteByCode(String code) {
         return template.update(UrlEntity.class)
                 .matching(Query.query(Criteria.where("code").is(code)))
-                .apply(Update.update("deleted_at", java.time.Instant.now()))
+                .apply(Update.update("deleted_at", Instant.now()))
                 .then();
+    }
+
+    @Override
+    public Mono<Url> updateMeta(String code, Instant expiresAt, String passwordHash, boolean removePassword) {
+        boolean hasExpiry = expiresAt != null;
+        boolean hasPassword = removePassword || passwordHash != null;
+        if (!hasExpiry && !hasPassword) {
+            return findByCode(code);
+        }
+        Update update = hasExpiry ? Update.update("expires_at", expiresAt) : Update.update("password_hash", "");
+        if (hasExpiry && hasPassword) {
+            update = update.set("password_hash", removePassword ? null : passwordHash);
+        }
+        return template.update(UrlEntity.class)
+                .matching(Query.query(Criteria.where("code").is(code)))
+                .apply(update)
+                .then(findByCode(code));
     }
 
     @Override

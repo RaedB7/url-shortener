@@ -44,7 +44,8 @@ class BloomFilterManagerTest {
         assertTrue(manager.mightContain("fresh-code"));
     }
 
-    private static final class FakeRepo implements UrlRepository, org.springframework.beans.factory.ObjectProvider<UrlRepository> {
+    private static final class FakeRepo
+            implements UrlRepository, org.springframework.beans.factory.ObjectProvider<UrlRepository> {
 
         private final List<String> codes;
 
@@ -94,6 +95,12 @@ class BloomFilterManagerTest {
 
         @Override
         public reactor.core.publisher.Mono<Void> softDeleteByCode(String code) {
+            return reactor.core.publisher.Mono.empty();
+        }
+
+        @Override
+        public reactor.core.publisher.Mono<Url> updateMeta(String code, java.time.Instant expiresAt,
+                String passwordHash, boolean removePassword) {
             return reactor.core.publisher.Mono.empty();
         }
 

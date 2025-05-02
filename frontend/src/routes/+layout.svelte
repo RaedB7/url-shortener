@@ -41,8 +41,11 @@
 		<div class="nav-links">
 			{#if me}
 				<a href="/links">My Links</a>
+				<a href="/domains">Domains</a>
 				{#if me.role === "ADMIN"}
 					<a href="/admin">Admin</a>
+					<a href="/admin/users" class="sub">Users</a>
+					<a href="/admin/audit" class="sub">Audit</a>
 				{/if}
 				<span class="chip">{me.email}</span>
 				<button class="btn btn-ghost btn-sm" onclick={logout}
@@ -94,5 +97,9 @@
 	}
 	.nav-links a:hover {
 		color: var(--text);
+	}
+	.nav-links a.sub {
+		font-size: 0.85rem;
+		opacity: 0.75;
 	}
 </style>

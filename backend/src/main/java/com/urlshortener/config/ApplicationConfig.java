@@ -15,6 +15,8 @@ import com.urlshortener.application.ResolveUrlService;
 import com.urlshortener.domain.port.inbound.AdminUseCase;
 import com.urlshortener.domain.port.inbound.AuthUseCase;
 import com.urlshortener.domain.port.inbound.CreateShortUrlUseCase;
+import com.urlshortener.application.EditUrlService;
+import com.urlshortener.domain.port.inbound.EditUrlUseCase;
 import com.urlshortener.domain.port.inbound.GetAnalyticsUseCase;
 import com.urlshortener.domain.port.inbound.ManageDomainsUseCase;
 import com.urlshortener.domain.port.inbound.ManageUrlsUseCase;
@@ -84,6 +86,13 @@ public class ApplicationConfig {
     public ManageUrlsUseCase manageUrlsUseCase(UrlRepository urlRepository,
             CacheRepository cacheRepository) {
         return new ManageUrlsService(urlRepository, cacheRepository);
+    }
+
+    @Bean
+    public EditUrlUseCase editUrlUseCase(UrlRepository urlRepository,
+            CacheRepository cacheRepository,
+            PasswordHasher passwordHasher) {
+        return new EditUrlService(urlRepository, cacheRepository, passwordHasher);
     }
 
     @Bean

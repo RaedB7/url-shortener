@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { api, ApiError, type UrlResponse } from '$lib/api';
+	import { onMount } from 'svelte';
+	import { api, ApiError, type UrlResponse, type Me } from '$lib/api';
 
 	let url = $state('');
 	let alias = $state('');
@@ -10,6 +11,15 @@
 	let error = $state('');
 	let result = $state<UrlResponse | null>(null);
 	let copied = $state(false);
+	let me = $state<Me | null>(null);
+
+	onMount(async () => {
+		try {
+			me = await api<Me>('/auth/me');
+		} catch {
+			me = null;
+		}
+	});
 
 	async function create(e: SubmitEvent) {
 		e.preventDefault();
@@ -59,24 +69,32 @@
 			</button>
 		</div>
 		<button type="button" class="options-toggle" onclick={() => (showOptions = !showOptions)}>
-			{showOptions ? 'Hide options' : 'Options (alias, expiry, password)'}
+			{showOptions ? 'Hide options' : me ? 'Options (alias, expiry, password)' : 'Options (expiry)'}
 		</button>
 		{#if showOptions}
 			<div class="options-grid">
+				{#if me}
+					<div>
+						<label for="alias">Custom alias</label>
+						<input id="alias" type="text" bind:value={alias} placeholder="my-link" />
+					</div>
+				{/if}
 				<div>
-					<label for="alias">Custom alias</label>
-					<input id="alias" type="text" bind:value={alias} placeholder="my-link" />
-				</div>
-				<div>
-					<label for="expires">Expires at</label>
+					<label for="expires">Expires at{me ? '' : ' (required, max 7 days)'}</label>
 					<input id="expires" type="datetime-local" bind:value={expiresAt} />
 				</div>
-				<div>
-					<label for="password">Password</label>
-					<input id="password" type="password" bind:value={password} placeholder="Optional" />
-				</div>
+				{#if me}
+					<div>
+						<label for="password">Password</label>
+						<input id="password" type="password" bind:value={password} placeholder="Optional" />
+					</div>
+				{/if}
 			</div>
-			<p class="text-secondary hint">Aliases and passwords require an account. Guest links expire within 7 days.</p>
+			{#if !me}
+				<p class="text-secondary hint">
+					<a href="/register">Create an account</a> for custom aliases, passwords and permanent links.
+				</p>
+			{/if}
 		{/if}
 	</form>
 

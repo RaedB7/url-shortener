@@ -19,6 +19,12 @@
 	let error = $state("");
 	let copied = $state(false);
 	let showQr = $state(false);
+	let showEdit = $state(false);
+	let editExpiry = $state("");
+	let editPassword = $state("");
+	let removePassword = $state(false);
+	let editMessage = $state("");
+	let saving = $state(false);
 	let charts: Chart[] = [];
 
 	const dark = {
@@ -216,6 +222,30 @@
 		return link ? encodeURIComponent(link.shortUrl) : "";
 	}
 
+	async function saveEdit() {
+		if (!link) return;
+		saving = true;
+		editMessage = "";
+		try {
+			const body: Record<string, unknown> = {};
+			if (editExpiry) body.expiresAt = new Date(editExpiry).toISOString();
+			if (removePassword) body.removePassword = true;
+			else if (editPassword) body.password = editPassword;
+			const updated = await api<UrlResponse>(`/links/${link.code}`, {
+				method: "PATCH",
+				body: JSON.stringify(body)
+			});
+			link = updated;
+			editMessage = "Saved.";
+			editPassword = "";
+			removePassword = false;
+		} catch (e) {
+			editMessage = e instanceof ApiError ? e.message : "Save failed";
+		} finally {
+			saving = false;
+		}
+	}
+
 	onMount(() => {
 		const code = window.location.pathname.split("/").pop() || "";
 		load(code);
@@ -269,6 +299,10 @@
 						class="btn btn-ghost btn-sm"
 						onclick={() => (showQr = !showQr)}>QR</button
 					>
+					<button
+						class="btn btn-ghost btn-sm"
+						onclick={() => (showEdit = !showEdit)}>Edit</button
+					>
 				</div>
 			</div>
 			{#if showQr}
@@ -280,6 +314,44 @@
 						height="220"
 					/>
 				</div>
+			{/if}
+			{#if showEdit}
+				<form class="edit-form" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+					<div class="edit-grid">
+						<div>
+							<label for="edit-expiry">Expiry</label>
+							<input
+								id="edit-expiry"
+								type="datetime-local"
+								bind:value={editExpiry}
+								placeholder={link.expiresAt ?? "no expiry"}
+							/>
+						</div>
+						<div>
+							<label for="edit-password">{link.passwordProtected ? "New password" : "Set password"}</label>
+							<input
+								id="edit-password"
+								type="password"
+								bind:value={editPassword}
+								placeholder={link.passwordProtected ? "Leave empty to keep" : "Optional"}
+							/>
+						</div>
+					</div>
+					{#if link.passwordProtected}
+						<label class="remove-pw">
+							<input type="checkbox" bind:checked={removePassword} />
+							Remove password protection
+						</label>
+					{/if}
+					<div class="edit-actions">
+						<button class="btn btn-primary btn-sm" type="submit" disabled={saving}>
+							{saving ? "Saving..." : "Save changes"}
+						</button>
+						{#if editMessage}
+							<span class={editMessage === "Saved." ? "success-text" : "error-text"}>{editMessage}</span>
+						{/if}
+					</div>
+				</form>
 			{/if}
 		</div>
 
@@ -373,6 +445,40 @@
 	.qr-box {
 		margin-top: 1rem;
 		text-align: center;
+	}
+	.edit-form {
+		margin-top: 1.25rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--border);
+	}
+	.edit-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+	}
+	.remove-pw {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.75rem;
+		color: var(--text);
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+	.remove-pw input {
+		width: auto;
+		margin: 0;
+	}
+	.edit-actions {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-top: 1rem;
+	}
+	@media (max-width: 640px) {
+		.edit-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 	.stat-row {
 		display: grid;

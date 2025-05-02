@@ -24,7 +24,7 @@ import java.util.HexFormat;
 public class DomainService implements ManageDomainsUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(DomainService.class);
-    private static final String DOMAIN_PATTERN = "^(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(\\.[a-zA-Z]{2,})+$";
+    private static final String DOMAIN_PATTERN = "^(?!-)[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$";
 
     private final CustomDomainRepository domainRepository;
     private final IdGenerator idGenerator;
@@ -33,7 +33,7 @@ public class DomainService implements ManageDomainsUseCase {
     private final SecureRandom random = new SecureRandom();
 
     public DomainService(CustomDomainRepository domainRepository, IdGenerator idGenerator,
-                         DnsVerifier dns, AuditLog auditLog) {
+            DnsVerifier dns, AuditLog auditLog) {
         this.domainRepository = domainRepository;
         this.idGenerator = idGenerator;
         this.dns = dns;

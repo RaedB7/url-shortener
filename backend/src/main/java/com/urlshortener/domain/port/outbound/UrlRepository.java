@@ -4,6 +4,8 @@ import com.urlshortener.domain.model.Url;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
+
 public interface UrlRepository {
 
     Mono<Url> save(Url url);
@@ -13,6 +15,8 @@ public interface UrlRepository {
     Mono<Boolean> existsByCode(String code);
 
     Mono<Void> softDeleteByCode(String code);
+
+    Mono<Url> updateMeta(String code, Instant expiresAt, String passwordHash, boolean removePassword);
 
     Mono<Page<Url>> findAllByOwner(Long ownerId, int page, int size, String search);
 

@@ -1,6 +1,8 @@
 spring:
   application:
     name: url-shortener
+  reactor:
+    context-propagation: auto
   r2dbc:
     url: r2dbc:postgresql://${US_DB_HOST:localhost}:${US_DB_PORT:5432}/${US_DB_NAME:urlshortener}
     username: ${US_DB_USER:urlshortener}
@@ -36,10 +38,10 @@ management:
       application: url-shortener
   tracing:
     sampling:
-      probability: 0.1
-    export:
-      otlp:
-        endpoint: ${US_OTLP_ENDPOINT:http://localhost:4318}
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${US_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
   info:
     env:
       enabled: true
@@ -78,6 +80,8 @@ spring:
     redis:
       host: ${US_REDIS_HOST:redis}
   tracing:
-    export:
-      otlp:
-        endpoint: ${US_OTLP_ENDPOINT:http://jaeger:4318}
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${US_OTLP_ENDPOINT:http://jaeger:4318/v1/traces}

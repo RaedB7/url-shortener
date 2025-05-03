@@ -6,6 +6,7 @@
 	import { api } from "$lib/api";
 	import type { Me } from "$lib/api";
 	import { page as pageStore } from "$app/state";
+	import { goto } from "$app/navigation";
 
 	let { children } = $props();
 	let me = $state<Me | null>(null);
@@ -13,6 +14,7 @@
 	async function logout() {
 		await api("/auth/logout", { method: "POST" }).catch(() => {});
 		me = null;
+		goto("/");
 	}
 
 	async function refreshMe() {
@@ -94,6 +96,10 @@
 		text-decoration: none;
 		font-size: 0.95rem;
 		transition: color 0.15s;
+	}
+	.nav-links a.btn-primary,
+	.nav-links a.btn-primary:hover {
+		color: #fff;
 	}
 	.nav-links a:hover {
 		color: var(--text);
